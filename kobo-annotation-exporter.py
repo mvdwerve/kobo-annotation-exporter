@@ -30,6 +30,7 @@ class AnnotParser(HTMLParser):
         self.fragment = False
         self.content = False
         self.text = False
+        self.date = False
 
     def handle_starttag(self, tag, attrs):
 
@@ -51,6 +52,9 @@ class AnnotParser(HTMLParser):
 
         if tag == "text":
             self.text = True
+        
+        if tag == "dc:date":
+            self.date = True
 
     def handle_endtag(self, tag):
 
@@ -62,6 +66,9 @@ class AnnotParser(HTMLParser):
 
         if tag == "text":
             self.text = False
+
+        if tag == "dc:date":
+            self.date = False
 
     def handle_data(self, data):
 
@@ -82,6 +89,9 @@ class AnnotParser(HTMLParser):
             self.annots[-1]["quote"] = data.replace("\n", " ")
             self.fragment = False
             self.text = False
+        
+        if self.date:
+            self.annots[-1]["date"] = data
 
     def to_markdown(self, path):
         """
@@ -93,15 +103,20 @@ class AnnotParser(HTMLParser):
         # log
         print(f"Exporting {fname}...")
 
-        with open(os.path.join(path, fname), "w") as fp:
+        if len(self.annots) == 0:
+            return
 
+        with open(os.path.join(path, fname), "w") as fp:
+            
             # title of the note
             fp.write(f"# {self.author} - {self.title}\n\n")
 
             for i, annot in enumerate(self.annots):
-                quote, comment = annot.values()
+                quote, comment, d = annot["quote"], annot["comment"], annot["date"]
 
-                fp.write(f"{comment}\n\n")
+                fp.write(f"## {d}\n")
+                if comment is not None:
+                    fp.write(f"### Comment\n{comment}\n\n")
                 fp.write(f"> {quote}\n\n")
 
 
